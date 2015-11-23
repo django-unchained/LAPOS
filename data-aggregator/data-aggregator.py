@@ -64,19 +64,19 @@ def main():
 			corpusSentences = corpusSentences.intersection(sentences)
 	print 'Finished compiling ' + str(len(corpusSentences)) + ' sentences'
 
-	#print 'Populating data'
+	print 'Populating data'
 	data = {}
 	for file in europarl_files:
 		language_file = open(args.input_datapath+'/'+file, 'r')
 		lines = language_file.readlines()
-		#print file
+		print file
 		for i in range(0, len(lines), 3):
-			metadata = lines[i]
-			sentence = lines[i+1]
-			alignments = getAlignments(lines[i+2])
 			words = getWords(lines[i+2])
-			language = file[3:5]
 			if (tuple(words) in corpusSentences):
+				metadata = lines[i]
+				sentence = lines[i+1]
+				alignments = getAlignments(lines[i+2])
+				language = file[3:5]
 				if (tuple(words) in data.keys()):
 					entryArray = data[tuple(words)]
 					#entryArray.append(tuple([metadata, sentence, alignments]))
@@ -87,6 +87,7 @@ def main():
 					data[tuple(words)] = [tuple([language, sentence, alignments])]
 
 	outFile = open(args.output_file, 'w')
+	print 'Writing output'
 	for key in data.keys():
 		languageSet = set()
 		outFile.write(string.join(key))
