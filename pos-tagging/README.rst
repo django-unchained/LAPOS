@@ -18,7 +18,9 @@ Make sure that Treetagger is setup correctly. Download all parameter files for l
 
 This ensures that the tagger will output several tag probabilities per word. 
 
-For Treetagger-Python: In the ``treetagger.py`` file, add the path to these cmd/tree-tagger-language files. 
+Additionally, correct the paths to bin, cmd and lib specified in tree-tagger-polish (and possibly other language taggers) within the cmd folder.
+
+For Treetagger-Python: In the ``treetagger.py`` file, add the path to these cmd/tree-tagger-language files. Pip install Treetagger-Python (upgrade if necessary).
 
 Usage
 ------------
