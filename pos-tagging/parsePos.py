@@ -1,6 +1,7 @@
 import re
 from treetagger import TreeTagger
 import sys
+import argparse
 
 languages = ['en', 'nl', 'it', 'es', 'sl', 'de', 'pl', 'sk', 'fr']
 englishWordPositions = {}
@@ -10,7 +11,7 @@ def main():
 	global tagDictMap, taggerMap
 
 	parser = argparse.ArgumentParser(description='Parse POS data')
-	parser.add_argument('--input-file', help='Files containing POS info')
+	parser.add_argument('--input-file', help='Files containing POS info', required=True)
 	args = parser.parse_args()
 
 	output = open('tagged.all','w')
