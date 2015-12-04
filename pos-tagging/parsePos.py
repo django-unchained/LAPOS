@@ -218,7 +218,7 @@ def parseSource(sentence, probString, alignmentString):
 				if (len(englishWordPositions) < englishPosition):
 					print 'English word positions length index mismatch'
 					return None
-				englishWord = englishWord + [englishWordPositions[englishPosition]]
+				englishWord = englishWord + [tuple([englishWordPositions[englishPosition], englishPosition])]
 			englishPosition = englishPosition + 1
 		tuples = tuples + [tuple([words[i-1], probMap, englishWord])]	
 		i = i + 1
@@ -244,7 +244,7 @@ def parseEnglish(sentence, probString):
 		probMap = getProbMapFromString(probDist)
 		if (probMap is None):
 			return None	
-		englishWord = [words[i]]
+		englishWord = [tuple([words[i], i])]
 		tuples = tuples + [tuple([words[i], probMap, englishWord])]
 		i = i + 1
 	return tuples
