@@ -10,7 +10,6 @@ tagDictMap = {}
 taggerMap = {}
 def main():
 	global tagDictMap, taggerMap
-
 	parser = argparse.ArgumentParser(description='Parse POS data')
 	parser.add_argument('--input-file', help='Files containing POS info', required=True)
 	parser.add_argument('--output-path', help='Folder to store intermediate data', required=True)
@@ -36,17 +35,24 @@ def main():
 					print lang
 					sentence = lines[i]
 					probString = tagWrite(sentence, tagDictMap[lang], taggerMap[lang], lang, output, errors)
+					testProbString = lines[i+1]
+					if(testProbString.split()[0] not in tagDictMap[lang].values()):
+						print testProbString.split()[0], tagDictMap[lang].values()
+						print 'Fall back i'
+						i = i - 1
 	 				i = i + 2
 					if (englishLine == False):
 						alignmentString = lines[i]
 						i = i + 1
-						wordTuples = parseSource(sentence, probString, alignmentString)
+						if (not error):
+							wordTuples = parseSource(sentence, probString, alignmentString)
 						if (wordTuples is None):
 							error = True
 						else:
 							words[lang] = words[lang] + wordTuples
 					else:
-						wordTuples = parseEnglish(sentence, probString)
+						if (not error):
+							wordTuples = parseEnglish(sentence, probString)
 						if (wordTuples is None):
 							error = True
 						else:
@@ -54,7 +60,7 @@ def main():
 						englishLine = False
 			else:
 				englishLine = True
-				if (not error):
+				if not error:
 					trainingInstances.append(words)
 					f = open(args.output_path+'/'+str(i/27) + '.txt','wb')
 					pickle.dump(words,f)
