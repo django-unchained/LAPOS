@@ -16,6 +16,8 @@ PROBABILITY_LIST_INDEX = 1
 
 
 def get_alignment_decision(lang1_eng_alignment_set, lang2_eng_alignment_set):
+    if len(lang1_eng_alignment_set) == 0 or len(lang2_eng_alignment_set) == 0:
+        return(False)
     if (len(set.intersection(lang1_eng_alignment_set, lang2_eng_alignment_set)) / (min(len(lang1_eng_alignment_set), len(lang2_eng_alignment_set)))) > ALIGNMENT_OVERLAP_THRESHOLD:
        return(True)
     else:
@@ -24,6 +26,8 @@ def get_alignment_decision(lang1_eng_alignment_set, lang2_eng_alignment_set):
 def get_source_alignments(instance, target_lang, source_langs, target_word_tuple):
     target_word_eng_alignments = set(target_word_tuple[ALIGNMENT_INDEX])
     alignment_dict = {}
+    if len(target_word_eng_alignments == 0):
+        return({})
     for source_lang in source_langs:
         source_lang_word_alignments = []
         source_sentence = instance[source_lang]
@@ -97,25 +101,29 @@ def process_corpus(corpus, target_lang, source_langs):
         target_sentence = instance[target_lang]
         for target_word_tuple in target_sentence:
             target_source_alignments = get_source_alignments(instance, target_lang, source_langs, target_word_tuple)#returns list of source language word tuples that this target word is aligned to
+            if (len(target_source_alignments) == 0):#unaligned word, currently NOT considered in our accuracy calculations
+                continue
             source_distributions = get_source_distributions(target_source_alignments)#conflates distributions of all source aligned words in this source language into one distribution
             sentence_level_projection_instance.append((target_word_tuple,source_distributions))
         sentence_level_projection_instances.append(sentence_level_projection_instance)
     return(sentence_level_projection_instances)
 
-def get_actual_tag(word_projection_instance):# NEED TO DEAL WITH CASE WHEN MULTIPLE TAGS HAVE SAME PROBABILITY
+def get_actual_tags(word_projection_instance):# NEED TO DEAL WITH CASE WHEN MULTIPLE TAGS HAVE SAME PROBABILITY
     distribution = word_projection_instance[PROBABILITY_LIST_INDEX]
     max = -1
-    actual_tag = None
+    actual_tags = []
     """
     Eventualy replace with itemgetter method. This implementation is just for readability and debugging
     """
     for pos in distribution.keys():
         if distribution[pos] > max:
             max = distribution[pos]
-            actual_tag = pos
-    return(actual_tag)
+            actual_tags = [pos]
+        elif distribution[pos] == max:
+            actual_tags.append(pos)
+    return(actual_tags)
 
-def predict_tag(best_candidate_counts, best_candidate_max_probs):
+def predict_tag(best_candidate_counts, best_candidate_max_probs):#Picks the highest probability tag among all those agreed upon by max no. of source languages
     tie_candidates = []
     tie_count = -1
     for pos_candidate in best_candidate_counts.keys():
@@ -126,10 +134,10 @@ def predict_tag(best_candidate_counts, best_candidate_max_probs):
                 tie_candidates = [pos_candidate]
             elif best_candidate_max_probs[pos_candidate] == best_candidate_max_probs[tie_candidates[-1]]:
                 tie_candidates.append(pos_candidate)
-    return(tie_candidates[0])
+    return(tie_candidates)
 
-def get_predicted_tag(word_projection_instance):
-    source_distributions_dict = word_projection_instance[PROBABILITY_LIST_INDEX]
+def get_predicted_tag(word_projection_instance):#Checks for pos tag with max agreement among all source languages
+    source_distributions_dict = word_projection_instance[1]
     best_candidates_counts = {}
     best_candidate_max_probs = {}
     for source_lang in source_distributions_dict.keys():
@@ -147,16 +155,16 @@ def get_predicted_tag(word_projection_instance):
             current_max_prob = best_candidate_max_probs[best_candidate]
             if max_prob > current_max_prob:
                 best_candidate_max_probs[best_candidate] = max_prob
-    predict_tag(best_candidates_counts, best_candidate_max_probs)
+    return(predict_tag(best_candidates_counts, best_candidate_max_probs))
 
 
 def get_projection_score(sentence_level_projection_instance):
     tot_correct = 0
     tot = 0
     for word_projection_instance in sentence_level_projection_instance:
-        actual_tag = get_actual_tag(word_projection_instance)
+        actual_tag = get_actual_tags(word_projection_instance)
         predicted_tag = get_predicted_tag(word_projection_instance)
-        if actual_tag == predicted_tag:
+        if len(set.intersection(set(actual_tag) == set(predicted_tag))) > 0:#Correct tag is assumed to be recoverable ----> This is why weighting of languages is important
             tot_correct += 1
         tot += 1
     return ([tot_correct, tot])
@@ -185,6 +193,7 @@ def populate_data(pickle_data_folder):
             data_structure = pickle.load(f)
             aggregated_data.append(data_structure)
         break
+    return(aggregated_data)
 
 """
 ############################################ M A I N   F U N C T I O N #################################################
@@ -194,7 +203,7 @@ def populate_data(pickle_data_folder):
 """
             RE WRITE GET ACTUAL TAGS FUNCTON!!!
 """
-PICKLE_PATH = "./pickle"
+PICKLE_PATH = "./pickle_files"
 PROJECTION_INSTANCE_DUMP_FILE = './Projection_instances.pickle'
 TARGET_LANGUAGE = 'es'
 
