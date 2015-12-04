@@ -188,7 +188,7 @@ def parseSource(sentence, probString, alignmentString):
 	#print words
 	#print len(words)
 	alignments = [re.split('~', x) for x in re.split(r'\t', alignmentString)]
-	alignments = alignments[0:len(alignments)-1]
+	alignments = alignments[1:]
 	tuples = []
 	i = 1
 	probStrings = re.split('\t', probString)
