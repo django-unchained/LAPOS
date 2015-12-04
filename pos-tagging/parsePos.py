@@ -2,6 +2,7 @@ import re
 from treetagger import TreeTagger
 import sys
 import argparse
+import pickle
 
 languages = ['en', 'nl', 'it', 'es', 'sl', 'de', 'pl', 'sk', 'fr']
 englishWordPositions = {}
@@ -12,8 +13,9 @@ def main():
 
 	parser = argparse.ArgumentParser(description='Parse POS data')
 	parser.add_argument('--input-file', help='Files containing POS info', required=True)
+	parser.add_argument('--output-path', help='Folder to store intermediate data', required=True)
 	args = parser.parse_args()
-
+	error = False
 	output = open('tagged.all','w')
   	errors = open('errors.txt','w')
 	tagLang(languages)
@@ -34,26 +36,35 @@ def main():
 					print lang
 					sentence = lines[i]
 					probString = tagWrite(sentence, tagDictMap[lang], taggerMap[lang], lang, output, errors)
-	 				#print 'Sentence ' + sentence
-					#print 'Prob ' + probString
-					i = i + 2
+	 				i = i + 2
 					if (englishLine == False):
 						alignmentString = lines[i]
 						i = i + 1
 						wordTuples = parseSource(sentence, probString, alignmentString)
-						words[lang] = words[lang] + wordTuples
+						if (wordTuples is None):
+							error = True
+						else:
+							words[lang] = words[lang] + wordTuples
 					else:
 						wordTuples = parseEnglish(sentence, probString)
-						words[lang] = words[lang] + wordTuples
+						if (wordTuples is None):
+							error = True
+						else:
+							words[lang] = words[lang] + wordTuples
 						englishLine = False
-
 			else:
 				englishLine = True
-				trainingInstances.append(words)
+				if (not error):
+					trainingInstances.append(words)
+					f = open(args.output_path+'/'+str(i/27) + '.txt','wb')
+					pickle.dump(words,f)
+					f.close()
+				else:
+					print "ERROR " + str(i/27)
 				for lang in languages:
 					words[lang] = []
 				i = i + 1
-			sys.stdout.flush()
+				error = False
 		print 'Done'
 
 def tagWrite(line, tagDict, tagger, langCode, output, errors):
@@ -185,17 +196,24 @@ def parseSource(sentence, probString, alignmentString):
 	#print 'probStrings coming up'
 	#print probStrings
 	#print len(probStrings)
+	if (len(words) != len(probStrings)):
+		print 'Source words-tags mismatch'
+		return None
 	for probDist in probStrings:
 		if (len(probDist) == 0):
 			continue
 		probMap = getProbMapFromString(probDist)
+		if (probMap is None):
+			return None
 		englishPosition = 0
 		englishWord = []
 		for alignment in alignments:
 			if str(i) in alignment:
+				if (len(englishWordPositions) < englishPosition):
+					print 'English word positions length index mismatch'
+					return None
 				englishWord = englishWord + [englishWordPositions[englishPosition]]
 			englishPosition = englishPosition + 1
-		
 		tuples = tuples + [tuple([words[i-1], probMap, englishWord])]	
 		i = i + 1
 	return tuples
@@ -211,10 +229,15 @@ def parseEnglish(sentence, probString):
 	for i in range(len(words)):
 		englishWordPositions[i] = words[i]
 	i = 0
+	if (len(words) + 1 != len(re.split('\t', probString))):
+		print 'English words-tags mismatch'
+		return None
 	for probDist in re.split('\t', probString):
 		if (len(probDist) == 0 or probDist[len(probDist) - 1] == '\n'):
 			continue
 		probMap = getProbMapFromString(probDist)
+		if (probMap is None):
+			return None	
 		englishWord = [words[i]]
 		tuples = tuples + [tuple([words[i], probMap, englishWord])]
 		i = i + 1
@@ -229,6 +252,9 @@ def getProbMapFromString(probString):
 		if (distElems[j] == '\n'):
 			j = j + 2
 			continue
+		if (len(distElems) <= j+1):
+			print 'Probabilities map error'
+			return None
 		if (distElems[j] in probMap):
 			probMap[distElems[j]] = probMap[distElems[j]] + (float)(distElems[j+1])
 		else:
