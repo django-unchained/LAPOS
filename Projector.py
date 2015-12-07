@@ -26,7 +26,7 @@ def get_alignment_decision(lang1_eng_alignment_set, lang2_eng_alignment_set):
 def get_source_alignments(instance, target_lang, source_langs, target_word_tuple):
     target_word_eng_alignments = set(target_word_tuple[ALIGNMENT_INDEX])
     alignment_dict = {}
-    if len(target_word_eng_alignments == 0):
+    if len(target_word_eng_alignments) == 0:
         return({})
     for source_lang in source_langs:
         source_lang_word_alignments = []
@@ -109,7 +109,8 @@ def process_corpus(corpus, target_lang, source_langs):
     return(sentence_level_projection_instances)
 
 def get_actual_tags(word_projection_instance):# NEED TO DEAL WITH CASE WHEN MULTIPLE TAGS HAVE SAME PROBABILITY
-    distribution = word_projection_instance[PROBABILITY_LIST_INDEX]
+    #distribution = word_projection_instance[PROBABILITY_LIST_INDEX]
+    distribution = word_projection_instance[0][PROBABILITY_LIST_INDEX]
     max = -1
     actual_tags = []
     """
@@ -129,9 +130,10 @@ def predict_tag(best_candidate_counts, best_candidate_max_probs):#Picks the high
     for pos_candidate in best_candidate_counts.keys():
         if best_candidate_counts[pos_candidate] > tie_count:
             tie_candidates = [pos_candidate]
+            tie_count = best_candidate_counts[pos_candidate]
         elif best_candidate_counts[pos_candidate] == tie_count:
             if best_candidate_max_probs[pos_candidate] > best_candidate_max_probs[tie_candidates[-1]]:
-                tie_candidates = [pos_candidate]
+                tie_candidates = [pos_candidate]#The best candidate_max_probs can be used to break the tie
             elif best_candidate_max_probs[pos_candidate] == best_candidate_max_probs[tie_candidates[-1]]:
                 tie_candidates.append(pos_candidate)
     return(tie_candidates)
@@ -148,7 +150,8 @@ def get_predicted_tag(word_projection_instance):#Checks for pos tag with max agr
             if source_lang_distribution[pos] > max_prob:
                 max_prob = source_lang_distribution[pos]
                 best_candidate = pos
-        best_candidates_counts[best_candidate] = best_candidates_counts.get(best_candidate, 0) + 1
+        if best_candidate is not None:
+            best_candidates_counts[best_candidate] = best_candidates_counts.get(best_candidate, 0) + 1
         if best_candidate not in best_candidate_max_probs:
             best_candidate_max_probs[best_candidate] = max_prob
         else:
@@ -164,7 +167,8 @@ def get_projection_score(sentence_level_projection_instance):
     for word_projection_instance in sentence_level_projection_instance:
         actual_tag = get_actual_tags(word_projection_instance)
         predicted_tag = get_predicted_tag(word_projection_instance)
-        if len(set.intersection(set(actual_tag) == set(predicted_tag))) > 0:#Correct tag is assumed to be recoverable ----> This is why weighting of languages is important
+        assert not (len(predicted_tag) == 1 and None in predicted_tag) , "None is the only predicted tag!"
+        if len(set.intersection(set(actual_tag), set(predicted_tag))) > 0:#Correct tag is assumed to be recoverable ----> This is why weighting of languages is important
             tot_correct += 1
         tot += 1
     return ([tot_correct, tot])
@@ -180,30 +184,36 @@ def project_and_eval(corpus, target_lang, source_langs):
         [instance_tot_correct, instance_tot] = get_projection_score(sentence_level_projection_instance)
         tot_correct += instance_tot_correct
         tot += instance_tot
-    print("Projection score = " + str(tot_correct/tot))
+    print("Projection score = " + str(tot_correct * 1.0/tot))
 
 def populate_data(pickle_data_folder):
     if pickle_data_folder[-1] != '/':
         pickle_data_folder += '/'
     aggregated_data = []
+    print ('Reading files')
     for [path, dirs, files] in walk(pickle_data_folder):
         for file in files:
-            print ('Reading file' + file)
             f = open(pickle_data_folder + file, 'rb')
             data_structure = pickle.load(f)
             aggregated_data.append(data_structure)
         break
+    print('Done reading')
     return(aggregated_data)
 
 """
 ############################################ M A I N   F U N C T I O N #################################################
+
+POSSIBLE BUGS TO FIX!!!
+-When projecting from same language to itself, accuracy is not 100%
+
 """
 
 
 """
             RE WRITE GET ACTUAL TAGS FUNCTON!!!
 """
-PICKLE_PATH = "./pickle_files"
+#PICKLE_PATH = "./pickle_files"
+PICKLE_PATH = "./proper_pickle_files"
 PROJECTION_INSTANCE_DUMP_FILE = './Projection_instances.pickle'
 TARGET_LANGUAGE = 'es'
 
