@@ -220,6 +220,8 @@ TARGET_LANGUAGE = 'es'
 #ALL_LANGUAGES = ['en', 'nl', 'it', 'es', 'sl', 'de', 'pl', 'sk', 'fr']
 
 SOURCE_LANGUAGES = ['en', 'nl', 'it', 'sl', 'de', 'pl', 'sk', 'fr']
+ISO_LANGUAGES = ['eng', 'nld', 'ita', 'slv', 'deu', 'pol', 'slk', 'fra']
+ISO_TARGET = 'spa'
 
 corpus = populate_data(PICKLE_PATH)
 
